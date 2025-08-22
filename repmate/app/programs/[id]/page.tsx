@@ -13,10 +13,15 @@ type ExerciseDetail = {
   exercise_media?: { url_mp4: string | null; url_thumb: string | null }[]
 }
 
-// В Next 15 params может быть Promise, поэтому берём props: any и await params
-export default async function ExercisePage(props: any) {
-  const { id } = await props.params
-  const mode = (props.searchParams?.mode || 'home') as 'home' | 'gym'
+export default async function ExercisePage({
+  params,
+  searchParams
+}: {
+  params: Promise<{ id: string }>
+  searchParams?: { mode?: 'home' | 'gym' }
+}) {
+  const { id } = await params
+  const mode = (searchParams?.mode || 'home') as 'home' | 'gym'
 
   const { data, error } = await supabase
     .from('exercises')
@@ -27,9 +32,7 @@ export default async function ExercisePage(props: any) {
     .eq('id', id)
     .limit(1)
 
-  if (error) {
-    return <div style={{ padding: 16 }}>Ошибка загрузки упражнения</div>
-  }
+  if (error) return <div style={{ padding: 16 }}>Ошибка загрузки упражнения</div>
 
   const ex = (data ?? [])[0] as ExerciseDetail | undefined
   if (!ex) return <div style={{ padding: 16 }}>Не найдено</div>
@@ -55,9 +58,7 @@ export default async function ExercisePage(props: any) {
       <p><b>Инвентарь:</b> {ex.equipment}</p>
       <div>
         <b>Техника:</b>
-        <ul>
-          {(ex.howto ?? []).map((t, i) => <li key={i}>{t}</li>)}
-        </ul>
+        <ul>{(ex.howto ?? []).map((t, i) => <li key={i}>{t}</li>)}</ul>
       </div>
     </div>
   )
