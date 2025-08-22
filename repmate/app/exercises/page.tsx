@@ -1,6 +1,7 @@
-// app/exercises/page.tsx
 import { supabase } from '@/lib/supabase'
+import Image from 'next/image'
 import Link from 'next/link'
+import ModeSwitchController from '@/components/ModeSwitchController'
 
 const EQUIP_ALL = ['none','barbell','dumbbell','machine','cable','kettlebell'] as const
 type Equip = typeof EQUIP_ALL[number]
@@ -16,10 +17,8 @@ type ExerciseListItem = {
 
 export default async function ExercisesPage({
   searchParams
-}:{
-  searchParams:{ mode?: 'home'|'gym', muscle?: string }
-}) {
-  const mode = (searchParams.mode || 'home') as 'home'|'gym'
+}:{ searchParams:{ mode?: 'home'|'gym', muscle?: string } }) {
+  const mode = (searchParams.mode || 'gym') as 'home'|'gym'
   const muscle = searchParams.muscle || 'chest_mid'
   const allowed = mode === 'home' ? ['none'] : EQUIP_ALL
 
@@ -36,34 +35,39 @@ export default async function ExercisesPage({
   const list = (data ?? []) as ExerciseListItem[]
 
   return (
-    <div style={{ padding: 16 }}>
-      <h2>Упражнения</h2>
-      <ul style={{ listStyle: 'none', padding: 0 }}>
-        {list.map(x => (
-          <li key={x.id} style={{ margin: '8px 0' }}>
-            <Link href={`/exercise/${x.id}?mode=${mode}`}>
-              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                {x.exercise_media?.[0]?.url_thumb && (
-                  // next/image даст только warning — не критично; оставлю <img>
-                  <img
-                    src={x.exercise_media[0].url_thumb || ''}
-                    alt=""
-                    width={64}
-                    height={64}
-                    style={{ borderRadius: 8, objectFit: 'cover' }}
-                  />
-                )}
-                <div>
-                  <div style={{ fontWeight: 600 }}>{x.title}</div>
-                  <div style={{ fontSize: 12, opacity: .7 }}>
-                    {x.target_subregion ? `зона: ${x.target_subregion} · ` : ''}инвентарь: {x.equipment}
-                  </div>
-                </div>
+    <div className="p-4">
+      {/* Хедер: название группы + свитч */}
+      <div className="mb-3 flex items-center justify-between">
+        <div className="text-lg font-semibold">Упражнения</div>
+        <ModeSwitchController value={mode} />
+      </div>
+
+      {/* Грид карточек по 2 в ряд */}
+      <div className="grid grid-cols-2 gap-3">
+        {list.map((x) => (
+          <Link key={x.id} href={`/exercise/${x.id}?mode=${mode}`} className="rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden hover:shadow">
+            <div className="relative w-full aspect-[4/3] bg-neutral-100 dark:bg-neutral-900">
+              {x.exercise_media?.[0]?.url_thumb ? (
+                <Image
+                  src={x.exercise_media[0].url_thumb}
+                  alt=""
+                  fill
+                  sizes="(max-width: 768px) 50vw, 33vw"
+                  className="object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-xs opacity-60">нет превью</div>
+              )}
+            </div>
+            <div className="p-2">
+              <div className="text-sm font-medium leading-tight">{x.title}</div>
+              <div className="text-xs opacity-70">
+                {x.target_subregion ? `зона: ${x.target_subregion} · ` : ''}инвентарь: {x.equipment}
               </div>
-            </Link>
-          </li>
+            </div>
+          </Link>
         ))}
-      </ul>
+      </div>
     </div>
   )
 }
