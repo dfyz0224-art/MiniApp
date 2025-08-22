@@ -1,35 +1,13 @@
-// components/TGBackButton.tsx
+// repmate/components/TGBackButton.tsx
 'use client'
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-
-type TelegramBackButton = {
-  show: () => void
-  hide: () => void
-  onClick: (cb: () => void) => void
-  offClick: (cb: () => void) => void
-}
-
-type TelegramWebApp = {
-  BackButton?: TelegramBackButton
-}
-
-type TelegramNamespace = {
-  WebApp?: TelegramWebApp
-}
-
-declare global {
-  interface Window {
-    Telegram?: TelegramNamespace
-  }
-}
 
 export default function TGBackButton({ className = '' }: { className?: string }) {
   const router = useRouter()
 
   useEffect(() => {
-    const tg = window.Telegram?.WebApp
-    const back = tg?.BackButton
+    const back = window.Telegram?.WebApp?.BackButton
     if (!back) return
 
     back.show()
