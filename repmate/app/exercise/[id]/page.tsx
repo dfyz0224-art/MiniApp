@@ -1,12 +1,24 @@
+// app/exercise/[id]/page.tsx
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
-export default async function ExercisePage({ params, searchParams }:{
-  params:{ id:string }, searchParams:{ mode?: 'home'|'gym' }
-}) {
+type ExerciseDetail = {
+  id: string
+  title: string
+  equipment: string
+  level: string | null
+  target_subregion: string | null
+  primary_muscle_id: string | null
+  howto: string[] | null
+  exercise_media?: { url_mp4: string | null; url_thumb: string | null }[]
+}
+
+export default async function ExercisePage({
+  params, searchParams
+}:{ params:{ id:string }, searchParams:{ mode?: 'home'|'gym' } }) {
   const mode = (searchParams.mode || 'home') as 'home'|'gym'
 
-  const { data: items } = await supabase
+  const { data } = await supabase
     .from('exercises')
     .select(`
       id, title, equipment, level, target_subregion, primary_muscle_id, howto,
@@ -15,23 +27,23 @@ export default async function ExercisePage({ params, searchParams }:{
     .eq('id', params.id)
     .limit(1)
 
-  const ex = items?.[0]
-  if (!ex) return <div style={{ padding:16 }}>Не найдено</div>
+  const ex = (data ?? [])[0] as ExerciseDetail | undefined
+  if (!ex) return <div style={{ padding: 16 }}>Не найдено</div>
 
   return (
-    <div style={{ padding:16 }}>
-      <Link href={`/exercises?mode=${mode}&muscle=${ex.primary_muscle_id}`}>← Назад</Link>
-      <h2 style={{ marginTop:8 }}>{ex.title}</h2>
+    <div style={{ padding: 16 }}>
+      <Link href={`/exercises?mode=${mode}&muscle=${ex.primary_muscle_id || ''}`}>← Назад</Link>
+      <h2 style={{ marginTop: 8 }}>{ex.title}</h2>
 
       {ex.exercise_media?.[0]?.url_mp4 && (
         <video
-          src={ex.exercise_media[0].url_mp4}
+          src={ex.exercise_media[0].url_mp4 || undefined}
           autoPlay
           loop
           muted
           playsInline
           poster={ex.exercise_media[0].url_thumb || undefined}
-          style={{ width:'100%', borderRadius:12, margin:'12px 0' }}
+          style={{ width: '100%', borderRadius: 12, margin: '12px 0' }}
         />
       )}
 
@@ -40,7 +52,7 @@ export default async function ExercisePage({ params, searchParams }:{
       <div>
         <b>Техника:</b>
         <ul>
-          {(ex.howto ?? []).map((t:string,i:number)=><li key={i}>{t}</li>)}
+          {(ex.howto ?? []).map((t, i) => <li key={i}>{t}</li>)}
         </ul>
       </div>
     </div>
