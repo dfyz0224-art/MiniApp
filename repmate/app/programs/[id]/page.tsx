@@ -1,4 +1,3 @@
-// app/programs/[id]/page.tsx
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
@@ -6,7 +5,6 @@ const EQUIP_ALL = ['none','barbell','dumbbell','machine','cable','kettlebell'] a
 type Equip = typeof EQUIP_ALL[number]
 
 type Day = { id: string; title: string | null; day_index: number | null }
-
 type ExerciseMedia = { url_thumb: string | null }
 type ExerciseRow = {
   id: string
@@ -14,7 +12,6 @@ type ExerciseRow = {
   equipment: Equip | string
   exercise_media?: ExerciseMedia[]
 }
-
 type JoinedItem = {
   default_sets: number | null
   default_reps: string | null
@@ -28,23 +25,17 @@ export default async function ProgramPage({
   const mode = (searchParams.mode || 'home') as 'home'|'gym'
   const allowed = mode === 'home' ? (['none'] as readonly Equip[]) : EQUIP_ALL
 
-  // 1) Дни программы
-  const { data: daysData, error: daysErr } = await supabase
+  const { data: daysData } = await supabase
     .from('program_days')
     .select('id, title, day_index')
     .eq('program_id', params.id)
     .order('day_index', { ascending: true })
 
-  if (daysErr) {
-    return <div style={{ padding:16 }}>Ошибка загрузки дней программы</div>
-  }
-
   const days = (daysData ?? []) as Day[]
   const result: { day: Day; exercises: JoinedItem[] }[] = []
 
-  // 2) Упражнения по каждому дню (join с exercises + media)
   for (const d of days) {
-    const { data: items, error: itemsErr } = await supabase
+    const { data: items } = await supabase
       .from('program_day_exercises')
       .select(`
         default_sets, default_reps, notes,
@@ -52,10 +43,7 @@ export default async function ProgramPage({
       `)
       .eq('program_day_id', d.id)
 
-    if (itemsErr) continue
     const rows = (items ?? []) as JoinedItem[]
-
-    // фильтр Дом/Зал
     const visible = rows.filter((it) => {
       const eq = it.exercises?.equipment as Equip | undefined
       return it.exercises && eq ? allowed.includes(eq) : false
@@ -71,15 +59,11 @@ export default async function ProgramPage({
 
       {result.map(({ day, exercises }) => (
         <div key={day.id} style={{ margin:'12px 0', padding:'12px', border:'1px solid #eee', borderRadius:8 }}>
-          <h3 style={{ marginTop: 0 }}>
-            {day.title || (day.day_index ? `День ${day.day_index}` : 'День')}
-          </h3>
-
+          <h3 style={{ marginTop: 0 }}>{day.title || (day.day_index ? `День ${day.day_index}` : 'День')}</h3>
           <ul style={{ listStyle:'none', padding:0 }}>
             {exercises.map((it, i) => (
               <li key={i} style={{ margin:'8px 0', display:'flex', gap:12, alignItems:'center' }}>
                 {it.exercises?.exercise_media?.[0]?.url_thumb && (
-                  // Warning про <img> не критичен. Можно заменить на next/image позже.
                   <img
                     src={it.exercises.exercise_media[0].url_thumb || ''}
                     width={56}
