@@ -1,88 +1,64 @@
+// app/exercise/[id]/page.tsx
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 
-const EQUIP_ALL = ['none','barbell','dumbbell','machine','cable','kettlebell'] as const
-type Equip = typeof EQUIP_ALL[number]
-
-type Day = { id: string; title: string | null; day_index: number | null }
-type ExerciseMedia = { url_thumb: string | null }
-type ExerciseRow = {
+type ExerciseDetail = {
   id: string
   title: string
-  equipment: Equip | string
-  exercise_media?: ExerciseMedia[]
-}
-type JoinedItem = {
-  default_sets: number | null
-  default_reps: string | null
-  notes: string | null
-  exercises: ExerciseRow | null
+  equipment: string
+  level: string | null
+  target_subregion: string | null
+  primary_muscle_id: string | null
+  howto: string[] | null
+  exercise_media?: { url_mp4: string | null; url_thumb: string | null }[]
 }
 
-export default async function ProgramPage({
-  params, searchParams
-}:{ params:{ id:string }, searchParams:{ mode?: 'home'|'gym' } }) {
-  const mode = (searchParams.mode || 'home') as 'home'|'gym'
-  const allowed = mode === 'home' ? (['none'] as readonly Equip[]) : EQUIP_ALL
+// В Next 15 params может быть Promise, поэтому берём props: any и await params
+export default async function ExercisePage(props: any) {
+  const { id } = await props.params
+  const mode = (props.searchParams?.mode || 'home') as 'home' | 'gym'
 
-  const { data: daysData } = await supabase
-    .from('program_days')
-    .select('id, title, day_index')
-    .eq('program_id', params.id)
-    .order('day_index', { ascending: true })
+  const { data, error } = await supabase
+    .from('exercises')
+    .select(`
+      id, title, equipment, level, target_subregion, primary_muscle_id, howto,
+      exercise_media ( url_mp4, url_thumb )
+    `)
+    .eq('id', id)
+    .limit(1)
 
-  const days = (daysData ?? []) as Day[]
-  const result: { day: Day; exercises: JoinedItem[] }[] = []
-
-  for (const d of days) {
-    const { data: items } = await supabase
-      .from('program_day_exercises')
-      .select(`
-        default_sets, default_reps, notes,
-        exercises:exercise_id ( id, title, equipment, exercise_media ( url_thumb ) )
-      `)
-      .eq('program_day_id', d.id)
-
-    const rows = (items ?? []) as JoinedItem[]
-    const visible = rows.filter((it) => {
-      const eq = it.exercises?.equipment as Equip | undefined
-      return it.exercises && eq ? allowed.includes(eq) : false
-    })
-
-    result.push({ day: d, exercises: visible })
+  if (error) {
+    return <div style={{ padding: 16 }}>Ошибка загрузки упражнения</div>
   }
+
+  const ex = (data ?? [])[0] as ExerciseDetail | undefined
+  if (!ex) return <div style={{ padding: 16 }}>Не найдено</div>
 
   return (
     <div style={{ padding: 16 }}>
-      <Link href={`/programs?mode=${mode}`}>← Назад</Link>
-      <h2 style={{ marginTop: 8 }}>Программа</h2>
+      <Link href={`/exercises?mode=${mode}&muscle=${ex.primary_muscle_id || ''}`}>← Назад</Link>
+      <h2 style={{ marginTop: 8 }}>{ex.title}</h2>
 
-      {result.map(({ day, exercises }) => (
-        <div key={day.id} style={{ margin:'12px 0', padding:'12px', border:'1px solid #eee', borderRadius:8 }}>
-          <h3 style={{ marginTop: 0 }}>{day.title || (day.day_index ? `День ${day.day_index}` : 'День')}</h3>
-          <ul style={{ listStyle:'none', padding:0 }}>
-            {exercises.map((it, i) => (
-              <li key={i} style={{ margin:'8px 0', display:'flex', gap:12, alignItems:'center' }}>
-                {it.exercises?.exercise_media?.[0]?.url_thumb && (
-                  <img
-                    src={it.exercises.exercise_media[0].url_thumb || ''}
-                    width={56}
-                    height={56}
-                    style={{ borderRadius:8, objectFit:'cover' }}
-                    alt=""
-                  />
-                )}
-                <div>
-                  <div style={{ fontWeight:600 }}>{it.exercises?.title}</div>
-                  <div style={{ fontSize:12, opacity:.7 }}>
-                    {it.default_sets}×{it.default_reps}{it.notes ? ` · ${it.notes}` : ''}
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
+      {ex.exercise_media?.[0]?.url_mp4 && (
+        <video
+          src={ex.exercise_media[0].url_mp4 || undefined}
+          autoPlay
+          loop
+          muted
+          playsInline
+          poster={ex.exercise_media[0].url_thumb || undefined}
+          style={{ width: '100%', borderRadius: 12, margin: '12px 0' }}
+        />
+      )}
+
+      <p><b>Целевая зона:</b> {ex.target_subregion || '—'}</p>
+      <p><b>Инвентарь:</b> {ex.equipment}</p>
+      <div>
+        <b>Техника:</b>
+        <ul>
+          {(ex.howto ?? []).map((t, i) => <li key={i}>{t}</li>)}
+        </ul>
+      </div>
     </div>
   )
 }
