@@ -1,3 +1,4 @@
+// app/muscles/MusclesGridClient.tsx
 'use client'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -8,25 +9,35 @@ import { useMemo } from 'react'
 
 type Muscle = { id: string; name: string; group: string; subregion: string | null }
 
+// вынесли порядок наверх, чтобы не быть зависимостью useMemo
+const ORDER: string[] = ['chest', 'back', 'shoulders', 'arms', 'legs', 'core']
+
 const ICONS: Record<string, string> = {
   chest_upper: '/icons/muscles/chest.png',
-  chest_mid:   '/icons/muscles/chest.png',
+  chest_mid: '/icons/muscles/chest.png',
   chest_lower: '/icons/muscles/chest.png',
-  back:        '/icons/muscles/back.png',
-  legs:        '/icons/muscles/legs.png',
-  shoulders:   '/icons/muscles/shoulders.png',
-  arms:        '/icons/muscles/arms.png',
-  core:        '/icons/muscles/core.png',
+  back: '/icons/muscles/back.png',
+  legs: '/icons/muscles/legs.png',
+  shoulders: '/icons/muscles/shoulders.png',
+  arms: '/icons/muscles/arms.png',
+  core: '/icons/muscles/core.png',
 }
 
-export default function MusclesGridClient({ muscles, initialMode }: { muscles: Muscle[]; initialMode: 'home'|'gym' }) {
+export default function MusclesGridClient({
+  muscles,
+  initialMode,
+}: {
+  muscles: Muscle[]
+  initialMode: 'home' | 'gym'
+}) {
   const sp = useSearchParams()
-  const mode = (sp.get('mode') as 'home'|'gym') || initialMode
+  const mode = (sp.get('mode') as 'home' | 'gym') || initialMode
 
-  // Хотим стабильный порядок: грудь, спина, плечи, руки, ноги, кор
-  const order = ['chest','back','shoulders','arms','legs','core']
   const sorted = useMemo(
-    () => [...muscles].sort((a,b)=> order.indexOf(a.group) - order.indexOf(b.group)),
+    () =>
+      [...muscles].sort(
+        (a, b) => ORDER.indexOf(a.group) - ORDER.indexOf(b.group)
+      ),
     [muscles]
   )
 
@@ -39,7 +50,7 @@ export default function MusclesGridClient({ muscles, initialMode }: { muscles: M
 
       <h2 className="text-lg font-semibold mb-3">Группы мышц</h2>
       <div className="grid grid-cols-2 gap-3">
-        {sorted.map(m => (
+        {sorted.map((m) => (
           <Link
             key={m.id}
             href={`/exercises?muscle=${m.id}&mode=${mode}`}
